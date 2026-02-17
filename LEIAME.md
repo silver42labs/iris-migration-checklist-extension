@@ -7,24 +7,13 @@ Implante uma API de exportação de migração em qualquer servidor InterSystems
 
 ## Como usar
 
-- Instale pela [Chrome Web Store](https://chromewebstore.google.com/detail/iris-migration-checklist/anamganabilobholichagldbejkpclag) ou [Firefox Add-ons (AMO)](https://addons.mozilla.org/en-US/firefox/addon/iris-migration-checklist/).
+- Instale pela [Firefox Add-ons (AMO)](https://addons.mozilla.org/en-US/firefox/addon/iris-migration-checklist/) ou [Chrome Web Store](https://chromewebstore.google.com/detail/iris-migration-checklist/anamganabilobholichagldbejkpclag).
 - Abra o Web Portal do IRIS/Cache (ou qualquer página) no servidor alvo.
 - Clique no icone da extensão e escolha "Save Server Data" para capturar o baseline.
 - Abra uma aba para outro servidor e escolha "Compare to Saved Server".
 - Um relatório abre em uma nova aba com todas as diferenças por tipo de entidade.
 
 ## Como executar esta extensão localmente
-
-### Chrome
-
-1. Clone o repositório:
-
-    ```bash
-    git clone https://github.com/silver42labs/iris-migration-checklist-extension-chrome.git
-    cd iris-migration-checklist-extension-chrome
-    ```
-
-2. Abra `chrome://extensions`, ative o "Developer mode", clique em "Load unpacked" e selecione a pasta "package" deste projeto.
 
 ### Firefox
 
@@ -36,6 +25,17 @@ Implante uma API de exportação de migração em qualquer servidor InterSystems
     ```
 
 2. **Firefox:** Abra `about:debugging#/runtime/this-firefox`, clique em "Load Temporary Add-on" e selecione o arquivo `manifest.json` desta pasta.
+
+### Chrome
+
+1. Clone o repositório:
+
+    ```bash
+    git clone https://github.com/silver42labs/iris-migration-checklist-extension-chrome.git
+    cd iris-migration-checklist-extension-chrome
+    ```
+
+2. Abra `chrome://extensions`, ative o "Developer mode", clique em "Load unpacked" e selecione a pasta "package" deste projeto.
 
 ## Aspectos técnicos
 
@@ -52,7 +52,7 @@ Se o endpoint continuar indisponível, a interface fornece um link para a págin
 
 ### Como o snapshot é armazenado
 
-O snapshot salvo e o relatório de comparação ficam em `browser.storage.local` (ou `chrome.storage.local` no Chrome) apenas para esta extensão. Nenhum dado é enviado para fora do servidor IRIS/Cache que você está acessando. Você pode limpar todos os dados armazenados a qualquer momento usando o botão "Clear Saved Data" no popup.
+O snapshot salvo e o relatório de comparação ficam em `browser.storage.local` apenas para esta extensão. Nenhum dado é enviado para fora do servidor IRIS/Cache que você está acessando. Você pode limpar todos os dados armazenados a qualquer momento usando o botão "Clear Saved Data" no popup.
 
 ### Privacidade
 

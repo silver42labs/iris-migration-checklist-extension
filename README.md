@@ -7,24 +7,13 @@ Deploy a migration export API to any InterSystems IRIS/Cache server that exposes
 
 ## How to use
 
-- Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/iris-migration-checklist/anamganabilobholichagldbejkpclag) or [Firefox Add-ons (AMO)](https://addons.mozilla.org/en-US/firefox/addon/iris-migration-checklist/).
+- Install from the [Firefox Add-ons (AMO)](https://addons.mozilla.org/en-US/firefox/addon/iris-migration-checklist/) or [Chrome Web Store](https://chromewebstore.google.com/detail/iris-migration-checklist/anamganabilobholichagldbejkpclag).
 - Open the IRIS/Cache Web Portal (or any page) on the target server.
 - Click the extension icon and choose "Save Server Data" to capture the baseline.
 - Go to another server and choose "Compare to Saved Server".
 - A report opens in a new tab with all differences grouped by entity type.
 
 ## How to run this extension locally
-
-### Chrome
-
-1. Clone the repository:
-
-    ```bash
-    git clone https://github.com/silver42labs/iris-migration-checklist-extension-chrome.git
-    cd iris-migration-checklist-extension-chrome
-    ```
-
-2. **Chrome:** Open `chrome://extensions`, enable "Developer mode", click "Load unpacked" and select the folder "package" inside this project's directory.
 
 ### Firefox
 
@@ -36,6 +25,17 @@ Deploy a migration export API to any InterSystems IRIS/Cache server that exposes
     ```
 
 2. **Firefox:** Open `about:debugging#/runtime/this-firefox`, click "Load Temporary Add-on" and select `manifest.json` from this project folder.
+
+### Chrome
+
+1. Clone the repository:
+
+    ```bash
+    git clone https://github.com/silver42labs/iris-migration-checklist-extension-chrome.git
+    cd iris-migration-checklist-extension-chrome
+    ```
+
+2. **Chrome:** Open `chrome://extensions`, enable "Developer mode", click "Load unpacked" and select the folder "package" inside this project's directory.
 
 ## Technical aspects
 
@@ -52,7 +52,7 @@ If the endpoint is still unavailable, the UI provides a link to the Web Applicat
 
 ### How the snapshot is stored
 
-The saved snapshot and comparison report live in `browser.storage.local` (or `chrome.storage.local` on Chrome) for this extension only. Data is never sent anywhere other than the IRIS/Cache server you are connected to. You can clear all stored data at any time using the "Clear Saved Data" button in the popup.
+The saved snapshot and comparison report live in `browser.storage.local` for this extension only. Data is never sent anywhere other than the IRIS/Cache server you are connected to. You can clear all stored data at any time using the "Clear Saved Data" button in the popup.
 
 ### Privacy
 
