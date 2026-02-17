@@ -2,8 +2,8 @@
 <!-- Copy of the file LEIAME.md in the root folder to publish on github pages -->
 Implante uma API de exportação de migração em qualquer servidor InterSystems IRIS/Cache que exponha `/api/atelier`, capture o snapshot de configuração e compare com outro servidor em minutos. Esta extensão transforma um checklist manual e sujeito a erros em um relatório de diferenças repetível e confiável.
 
-[![en](https://img.shields.io/badge/lang-en-red.svg)](https://github.com/silveira42/iris-migration-checklist-extension/blob/main/README.md)
-[![pt-br](https://img.shields.io/badge/lang-pt--br-green.svg)](https://github.com/silveira42/iris-migration-checklist-extension/blob/main/LEIAME.md)
+[![en](https://img.shields.io/badge/lang-en-red.svg)](https://github.com/silver42labs/iris-migration-checklist-extension/blob/main/README.md)
+[![pt-br](https://img.shields.io/badge/lang-pt--br-green.svg)](https://github.com/silver42labs/iris-migration-checklist-extension/blob/main/LEIAME.md)
 
 ## Como usar
 
@@ -15,15 +15,27 @@ Implante uma API de exportação de migração em qualquer servidor InterSystems
 
 ## Como executar esta extensão localmente
 
+### Chrome
+
 1. Clone o repositório:
 
     ```bash
-    git clone https://github.com/silveira42/iris-migration-checklist-extension.git
-    cd iris-migration-checklist-extension
+    git clone https://github.com/silver42labs/iris-migration-checklist-extension-chrome.git
+    cd iris-migration-checklist-extension-chrome
     ```
 
-2. **Chrome/Edge:** Abra `chrome://extensions` (ou `edge://extensions`), ative o "Developer mode", clique em "Load unpacked" e selecione esta pasta do projeto.
-3. **Firefox:** Abra `about:debugging#/runtime/this-firefox`, clique em "Load Temporary Add-on" e selecione o arquivo `manifest.json` desta pasta.
+2. Abra `chrome://extensions`, ative o "Developer mode", clique em "Load unpacked" e selecione a pasta "package" deste projeto.
+
+### Firefox
+
+1. Clone o repositório:
+
+    ```bash
+    git clone https://github.com/silver42labs/iris-migration-checklist-extension-firefox.git
+    cd iris-migration-checklist-extension-firefox
+    ```
+
+2. **Firefox:** Abra `about:debugging#/runtime/this-firefox`, clique em "Load Temporary Add-on" e selecione o arquivo `manifest.json` desta pasta.
 
 ## Aspectos técnicos
 
