@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=320">
+    <link rel="stylesheet" href="styles.css">
+    <title>IRIS Migration Checklist</title>
+</head>
+
+<body class="popup">
+    <h1>IRIS Migration Checklist</h1>
+
+    <div class="actions">
+        <button id="save-btn" type="button">Save Server Data</button>
+        <button id="compare-btn" type="button" disabled>Compare to Saved Server</button>
+    </div>
+
+    <div class="secondary-actions">
+        <button id="clear-btn" type="button" class="btn-secondary btn-danger" disabled>Clear Saved Data</button>
+    </div>
+
+    <p id="status" class="status" aria-live="polite"></p>
+
+    <!-- Bootstrap consent dialog -->
+    <div id="consent-overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="consent-title">
+        <div class="dialog">
+            <h2 id="consent-title">Backend Installation Required</h2>
+            <p>The export API was not found. To proceed, the extension will:</p>
+            <ul>
+                <li>Upload and compile <a
+                        href="https://github.com/silveira42/iris-migration-checklist-extension/blob/main/Migration.Framework.cls"
+                        target="_blank" rel="noopener"><strong>Migration.Framework.cls</strong></a> in %SYS</li>
+                <li>Register a web application at <code>/api/v1/migration/framework</code></li>
+            </ul>
+            <p>Requires Atelier API access and appropriate server permissions.</p>
+            <div class="dialog-actions">
+                <button id="consent-cancel" type="button" class="btn-secondary">Cancel</button>
+                <button id="consent-confirm" type="button">Install and Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="popup-footer">
+        <a href="privacy.html" target="_blank">Privacy Policy</a>
+    </footer>
+
+    <script type="module" src="popup.js"></script>
+</body>
+
+</html>
