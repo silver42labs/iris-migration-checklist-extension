@@ -1,6 +1,10 @@
 /**
  * Storage layer — abstracts browser.storage.local for snapshots and reports.
+ *
+ * Uses the compatibility layer so the same code works on Chrome and Firefox.
  */
+
+import { browser } from './platform/browser-polyfill.js';
 
 const SNAPSHOT_KEY = 'savedSnapshot';
 const REPORT_KEY = 'comparisonReport';

@@ -5,6 +5,8 @@
  * All requests use credentials: "include" (user is already authenticated).
  */
 
+import { browser } from './platform/browser-polyfill.js';
+
 const EXPORT_PATH = '/api/v1/migration/framework/export';
 const ATELIER_BASE = '/api/atelier/v1/%25SYS';
 

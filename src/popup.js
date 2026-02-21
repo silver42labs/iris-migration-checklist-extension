@@ -1,11 +1,17 @@
 /**
  * Popup UI controller — orchestrates Save and Compare flows.
+ *
+ * Works on both Chrome and Firefox via the browser compatibility layer.
+ * On Firefox, runtime host-permission requests are needed because MV3
+ * does not auto-grant host_permissions at install. On Chrome they are
+ * granted at install so the request is a harmless no-op (already granted).
  */
 
+import { browser } from './platform/browser-polyfill.js';
 import { fetchExport } from './api.js';
 import { saveSnapshot, loadSnapshot, saveReport, clearAllData } from './storage.js';
-import { compare } from './compare.js';
-import { ensureExportApiAvailable } from './bootstrap.js';
+import { compare } from './core/compare.js';
+import { ensureExportApiAvailable } from './core/bootstrap.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const saveBtn = document.getElementById('save-btn');
@@ -221,8 +227,14 @@ async function getActiveTabOrigin() {
 
 /**
  * Ensure the extension has host permissions for the given server origin.
- * In Firefox MV3, host_permissions are not auto-granted at install,
- * so we request them at runtime (requires user gesture context).
+ *
+ * On Firefox MV3, host_permissions listed in the manifest are NOT
+ * automatically granted at install — the user must approve them at
+ * runtime. On Chrome MV3, host_permissions ARE auto-granted, so
+ * `permissions.contains` returns true immediately and no prompt appears.
+ *
+ * This function is safe to call on both browsers: on Chrome it is
+ * effectively a no-op.
  */
 async function ensureHostPermissions(baseUrl) {
     const origin = new URL(baseUrl).origin;

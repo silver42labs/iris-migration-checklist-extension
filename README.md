@@ -1,83 +1,55 @@
 # IRIS Migration Checklist
-<!-- Copy of the file README.md in the root folder to publish on github pages -->
+
 Deploy a migration export API to any InterSystems IRIS/Cache server that exposes `/api/atelier`, capture its configuration snapshot, and compare it against another server in minutes. This extension turns a manual, error-prone migration checklist into a repeatable diff report you can trust.
 
 [![en](https://img.shields.io/badge/lang-en-red.svg)](https://github.com/silver42labs/iris-migration-checklist-extension/blob/main/README.md)
 [![pt-br](https://img.shields.io/badge/lang-pt--br-green.svg)](https://github.com/silver42labs/iris-migration-checklist-extension/blob/main/LEIAME.md)
 
-## How to use
+## Supported Browsers
 
-- Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/iris-migration-checklist/anamganabilobholichagldbejkpclag) or [Firefox Add-ons (AMO)](https://addons.mozilla.org/en-US/firefox/addon/iris-migration-checklist/).
-- Open the IRIS/Cache Web Portal (or any page) on the target server.
-- Click the extension icon and choose "Save Server Data" to capture the baseline.
-- Go to another server and choose "Compare to Saved Server".
-- A report opens in a new tab with all differences grouped by entity type.
+- Google Chrome (Manifest V3) [Chrome Web Store](https://chromewebstore.google.com/detail/iris-migration-checklist/anamganabilobholichagldbejkpclag)
+- Mozilla Firefox (Manifest V3) [Firefox Add-ons (AMO)](https://addons.mozilla.org/en-US/firefox/addon/iris-migration-checklist/).
 
 ## How to run this extension locally
 
-### Chrome
+### Build
 
-1. Clone the repository:
+```bash
+# Build for both browsers
+./scripts/build.sh all
 
-    ```bash
-    git clone https://github.com/silver42labs/iris-migration-checklist-extension-chrome.git
-    cd iris-migration-checklist-extension-chrome
-    ```
+# Or target a specific browser
+./scripts/build.sh chrome
+./scripts/build.sh firefox
+```
 
-2. **Chrome:** Open `chrome://extensions`, enable "Developer mode", click "Load unpacked" and select the folder "package" inside this project's directory.
+### Load in Chrome
 
-### Firefox
+1. Go to `chrome://extensions`
+2. Enable "Developer mode"
+3. Click "Load unpacked" → select `dist/chrome/`
 
-1. Clone the repository:
+### Load in Firefox
 
-    ```bash
-    git clone https://github.com/silver42labs/iris-migration-checklist-extension-firefox.git
-    cd iris-migration-checklist-extension-firefox
-    ```
+1. Go to `about:debugging#/runtime/this-firefox`
+2. Click "Load Temporary Add-on" → select `dist/firefox/manifest.json`
 
-2. **Firefox:** Open `about:debugging#/runtime/this-firefox`, click "Load Temporary Add-on" and select `manifest.json` from this project folder.
+## Usage
 
-## Technical aspects
+1. Navigate to the IRIS management portal of your source server.
+2. Click the extension icon and press **Save Server Data**.
+3. Navigate to your target server.
+4. Click the extension icon and press **Compare to Saved Server**.
+5. A new tab opens with the comparison report.
 
-### How the extension creates an API inside IRIS
+## Architecture
 
-If `/api/v1/migration/framework/export` is not available, the extension uses the Atelier REST API to bootstrap it:
+See [ARCHITECTURE.md](ARCHITECTURE.md) for details on the project structure, browser compatibility layer, and design decisions.
 
-1. A consent dialog asks you to confirm the installation before any changes are made.
-2. Uploads [Migration.Framework.cls](Migration.Framework.cls).
-3. Compiles the class.
-4. Executes a setup procedure that registers `/api/v1/migration/framework`.
+## Privacy
 
-If the endpoint is still unavailable, the UI provides a link to the Web Application configuration page and asks you to click Save.
+The extension stores all data locally and communicates only with the IRIS/Caché servers you connect to. See the [Privacy Policy](src/docs/privacy.html) for full details.
 
-### How the snapshot is stored
+## License
 
-The saved snapshot and comparison report live in `browser.storage.local` (or `chrome.storage.local` on Chrome) for this extension only. Data is never sent anywhere other than the IRIS/Cache server you are connected to. You can clear all stored data at any time using the "Clear Saved Data" button in the popup.
-
-### Privacy
-
-This extension includes a [privacy policy](privacy.html) that covers data collection, storage, usage, and the Limited Use disclosure required by the Chrome Web Store and Firefox Add-ons. No data is shared with third parties.
-
-### How one snapshot is compared to the other
-
-The comparison engine routes each section through an appropriate strategy:
-
-- Entity-aware, ID-based diffs for things like users, roles, and web apps.
-- Flat multiset diffs for unordered collections like lookup tables.
-
-The report groups differences by entity type and highlights missing, extra, and changed items.
-
-### Project structure
-
-- `popup.html` / `popup.js`: extension UI and workflow.
-- `api.js`: export fetching and Atelier API helpers.
-- `bootstrap.js`: backend installation orchestration.
-- `compare.js`: comparison engine.
-- `strategies/`: comparison strategies (`entityCompare`, `flatCompare`).
-- `report.html` / `report.js`: report renderer.
-- `privacy.html`: privacy policy page.
-- `styles.css`: shared styles.
-
-## Contribute
-
-Issues and pull requests are welcome. Please include reproduction steps and sample export data when relevant.
+MIT — see [LICENSE](LICENSE).

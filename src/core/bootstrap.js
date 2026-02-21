@@ -15,7 +15,7 @@ import {
     uploadClass,
     compileClass,
     executeSetupProcedure
-} from './api.js';
+} from '../api.js';
 
 /**
  * Ensure the export endpoint is reachable on the given server.
