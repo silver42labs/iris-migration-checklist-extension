@@ -25,7 +25,7 @@
     },
     "browser_specific_settings": {
         "gecko": {
-            "id": "iris-migration-checklist@silveira42.github.io",
+            "id": "iris-migration-checklist@silver42labs.github.io",
             "strict_min_version": "140.0",
             "data_collection_permissions": {
                 "required": [
