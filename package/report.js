@@ -94,7 +94,7 @@ function renderSection(section) {
 
     // Collapsible header
     const details = document.createElement('details');
-    details.open = section.totalDifferences > 0;
+    details.open = false;
 
     const summary = document.createElement('summary');
     buildSectionHeader(summary, section);
@@ -170,7 +170,7 @@ function renderEntityBody(body, section) {
         changedSection.className = 'diff-group changed';
 
         const h4 = document.createElement('h4');
-        h4.textContent = 'Changed Properties';
+        h4.textContent = `Changed Properties (${changed.length})`;
         changedSection.appendChild(h4);
 
         for (const entity of changed) {

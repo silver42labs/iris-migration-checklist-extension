@@ -1,8 +1,6 @@
 Class Migration.Framework Extends %CSP.REST
 {
 
-Parameter HandleCorsRequest = 1;
-
 XData UrlMap
 {
 <Routes>
@@ -38,6 +36,7 @@ ClassMethod Setup() As %Library.Status [ SqlProc ]
 {
     ZNspace "%SYS"
     Set name = "/api/v1/migration/framework"
+    Set currentVersion = $ZVERSION
 
     If (##class(Security.Applications).Exists(name))
     {
@@ -48,6 +47,13 @@ ClassMethod Setup() As %Library.Status [ SqlProc ]
     Set props("DispatchClass") = $CLASSNAME()
     Set props("Description") = "Part of the Migration Framework. Uploaded at " _ ##Class(%Library.UTC).NowLocal()
     Set props("MatchRoles") = ":%All"
+    Set props("AutheEnabled") = 32
+
+    If (currentVersion [ "2027")
+    {
+        Set props("CSPZENEnabled") = 1
+    }
+
     $$$ThrowOnError(##class(Security.Applications).Create(name, .props))
 
     Return $$$OK
@@ -55,14 +61,22 @@ ClassMethod Setup() As %Library.Status [ SqlProc ]
 
 ClassMethod GetSnapshot() As %Library.Status
 {
-    #Dim %request As %CSP.Request
-    #Dim %response As %CSP.Response
-    Set method = ..GetMethodName("GetSnapshot")
-    
-    Set %response.ContentType = "application/json"
+    Try
+    {
+        #Dim %request As %CSP.Request
+        #Dim %response As %CSP.Response
+        Set method = ..GetMethodName("GetSnapshot")
 
-    // call specific setup method
-    Write $CLASSMETHOD(##this, method, %request)
+        Set %response.ContentType = "application/json"
+        Set %response.CharSet = "utf-8"
+
+        // call specific setup method
+        Write $CLASSMETHOD(##this, method, %request)
+    }
+    Catch (exception)
+    {
+        Write exception.DisplayString()
+    }
 
     Return $$$OK
 }
@@ -87,9 +101,25 @@ ClassMethod GetSnapshotGeneric(pRequest As %CSP.Request) As %Library.String
     {
         Set namespaceName = value.id
 
-        If ((namespaceName = "%SYS") || (namespaceName = "HSCUSTOM") || (namespaceName = "HSLIB") || (namespaceName = "HSSYS") || (namespaceName = "HSLOCALTEMP") || (namespaceName = "ENSLIB") || (namespaceName = "USER") || (namespaceName = "ENSDEMO") || (namespaceName = "ENSEMBLE")) Continue
+        If (namespaceName = "%SYS") Continue
+        If (namespaceName = "HSCUSTOM") Continue
+        If (namespaceName = "HSLIB") Continue
+        If (namespaceName = "HSSYS") Continue
+        If (namespaceName = "HSLOCALTEMP") Continue
+        If (namespaceName = "ENSLIB") Continue
+        If (namespaceName = "USER") Continue
+        If (namespaceName = "ENSDEMO") Continue
+        If (namespaceName = "ENSEMBLE") Continue
+        If (namespaceName = "%ALL") Continue
 
-        ZNspace namespaceName
+        Try
+        {
+            ZNspace namespaceName
+        }
+        Catch (exception)
+        {
+            Continue
+        }
 
         Set namespace = {}
 
@@ -98,17 +128,30 @@ ClassMethod GetSnapshotGeneric(pRequest As %CSP.Request) As %Library.String
         Set namespace.classes = ..GetClasses()
         Set namespace.globals = ..GetGlobals()
 
-        If ('##class(%Library.EnsembleMgr).IsEnsembleNamespace()) Continue
-
-        Set namespace.credentials = ..GetCredentials()
-        Set namespace.productionItems = ..GetProductionItems()
-        Set namespace.lookups = ..GetLookups()
+        // Configs exclusive to interoperability enabled namespaces
+        If (##class(%Library.EnsembleMgr).IsEnsembleNamespace())
+        {
+            Set namespace.credentials = ..GetCredentials()
+            Set namespace.productionItems = ..GetProductionItems()
+            Set namespace.lookups = ..GetLookups()
+        }
 
         $$$ThrowOnError(snapshot.namespaces.%Push(namespace))
     }
 
-
     Return snapshot.%ToJSON()
+}
+
+ClassMethod SafeGet(pResult As %SQL.StatementResult, pColumnName As %Library.String) As %Library.String
+{
+    Try
+    {
+        Return pResult.%Get(pColumnName)
+    }
+    Catch (exception)
+    {
+        Return ""
+    }
 }
 
 ClassMethod GetNamespaces() As %Library.DynamicObject
@@ -133,7 +176,7 @@ ClassMethod GetNamespaces() As %Library.DynamicObject
         Set namespace.globals = ..SafeGet(result, "Globals")
         Set namespace.routines = ..SafeGet(result, "Routines")
 
-        $$$ThrowOnError(response.%Push(namespace))
+        Do response.%Push(namespace)
     }
 
     Return response
@@ -184,7 +227,7 @@ ClassMethod GetTasks() As %Library.DynamicObject
         Set task.timePeriodEvery = ..SafeGet(result, "TimePeriodEvery")
         Set task.type = ..SafeGet(result, "Type")
 
-        $$$ThrowOnError(response.%Push(task))
+        Do response.%Push(task)
     }
 
     Return response
@@ -192,371 +235,444 @@ ClassMethod GetTasks() As %Library.DynamicObject
 
 ClassMethod GetWebApplications() As %Library.DynamicObject
 {
-    Set sql = ##class(%SQL.Statement).%New()
-
-    Set query = "SELECT * FROM Security.Applications WHERE Type = 2"
-
-    $$$ThrowOnError(sql.%Prepare(query))
-
-    Set result = sql.%Execute()
-
-    Set response = []
-
-    While result.%Next(.sc)
+    Try
     {
-        $$$ThrowOnError(sc)
-
-        Set application = {}
-
-        Set application.id = ..SafeGet(result, "ID")
-        Set application.autheEnabled = ..SafeGet(result, "AutheEnabled")
-        Set application.autoCompile = ..SafeGet(result, "AutoCompile")
-        Set application.CSPZENEnabled = ..SafeGet(result, "CSPZENEnabled")
-        Set application.description = ..SafeGet(result, "Description")
-        Set application.dispatchClass = ..SafeGet(result, "DispatchClass")
-        Set application.enabled = ..SafeGet(result, "Enabled")
-        Set application.isNameSpaceDefault = ..SafeGet(result, "IsNameSpaceDefault")
-        Set application.JWTAccessTokenTimeout = ..SafeGet(result, "JWTAccessTokenTimeout")
-        Set application.JWTAuthEnabled = ..SafeGet(result, "JWTAuthEnabled")
-        Set application.JWTRefreshTokenTimeout = ..SafeGet(result, "JWTRefreshTokenTimeout")
-        Set application.name = ..SafeGet(result, "Name")
-        Set application.nameLowerCase = ..SafeGet(result, "NameLowerCase")
-        Set application.nameSpace = ..SafeGet(result, "NameSpace")
-        Set application.resource = ..SafeGet(result, "Resource")
-
-        $$$ThrowOnError(response.%Push(application))
+        Set sql = ##class(%SQL.Statement).%New()
+    
+        Set query = "SELECT * FROM Security.Applications WHERE Type = 2"
+    
+        $$$ThrowOnError(sql.%Prepare(query))
+    
+        Set result = sql.%Execute()
+    
+        Set response = []
+    
+        While result.%Next(.sc)
+        {
+            $$$ThrowOnError(sc)
+    
+            Set application = {}
+    
+            Set application.id = ..SafeGet(result, "ID")
+            Set application.autheEnabled = ..SafeGet(result, "AutheEnabled")
+            Set application.autoCompile = ..SafeGet(result, "AutoCompile")
+            Set application.CSPZENEnabled = ..SafeGet(result, "CSPZENEnabled")
+            Set application.description = ..SafeGet(result, "Description")
+            Set application.dispatchClass = ..SafeGet(result, "DispatchClass")
+            Set application.enabled = ..SafeGet(result, "Enabled")
+            Set application.isNameSpaceDefault = ..SafeGet(result, "IsNameSpaceDefault")
+            Set application.JWTAccessTokenTimeout = ..SafeGet(result, "JWTAccessTokenTimeout")
+            Set application.JWTAuthEnabled = ..SafeGet(result, "JWTAuthEnabled")
+            Set application.JWTRefreshTokenTimeout = ..SafeGet(result, "JWTRefreshTokenTimeout")
+            Set application.name = ..SafeGet(result, "Name")
+            Set application.nameLowerCase = ..SafeGet(result, "NameLowerCase")
+            Set application.nameSpace = ..SafeGet(result, "NameSpace")
+            Set application.resource = ..SafeGet(result, "Resource")
+    
+            Do response.%Push(application)
+        }
+    
+        Return response
     }
-
-    Return response
+    Catch (exception)
+    {
+        Return []
+    }
 }
 
 ClassMethod GetSqlConnections() As %Library.DynamicObject
 {
-    Set sql = ##class(%SQL.Statement).%New()
-
-    Set query = "SELECT * FROM %Library.sys_SQLConnection"
-
-    $$$ThrowOnError(sql.%Prepare(query))
-
-    Set result = sql.%Execute()
-
-    Set response = []
-
-    While result.%Next(.sc)
+    Try
     {
-        $$$ThrowOnError(sc)
-
-        Set sqlConnection = {}
-
-        Set sqlConnection.id = ..SafeGet(result, "Connection_Name")
-        Set sqlConnection.URL = ..SafeGet(result, "URL")
-        Set sqlConnection.usr = ..SafeGet(result, "Usr")
-        Set sqlConnection.classpath = ..SafeGet(result, "classpath")
-        Set sqlConnection.driver = ..SafeGet(result, "driver")
-        Set sqlConnection.isJDBC = ..SafeGet(result, "isJDBC")
-        Set sqlConnection.useCAST = ..SafeGet(result, "useCAST")
-        Set sqlConnection.useCASTCHAR = ..SafeGet(result, "useCASTCHAR")
-        Set sqlConnection.useCOALESCE = ..SafeGet(result, "useCOALESCE")
-
-        $$$ThrowOnError(response.%Push(sqlConnection))
+        Set sql = ##class(%SQL.Statement).%New()
+    
+        Set query = "SELECT * FROM %Library.sys_SQLConnection"
+    
+        $$$ThrowOnError(sql.%Prepare(query))
+    
+        Set result = sql.%Execute()
+    
+        Set response = []
+    
+        While result.%Next(.sc)
+        {
+            $$$ThrowOnError(sc)
+    
+            Set sqlConnection = {}
+    
+            Set sqlConnection.id = ..SafeGet(result, "Connection_Name")
+            Set sqlConnection.URL = ..SafeGet(result, "URL")
+            Set sqlConnection.usr = ..SafeGet(result, "Usr")
+            Set sqlConnection.classpath = ..SafeGet(result, "classpath")
+            Set sqlConnection.driver = ..SafeGet(result, "driver")
+            Set sqlConnection.isJDBC = ..SafeGet(result, "isJDBC")
+            Set sqlConnection.useCAST = ..SafeGet(result, "useCAST")
+            Set sqlConnection.useCASTCHAR = ..SafeGet(result, "useCASTCHAR")
+            Set sqlConnection.useCOALESCE = ..SafeGet(result, "useCOALESCE")
+    
+            Do response.%Push(sqlConnection)
+        }
+    
+        Return response
     }
-
-    Return response
+    Catch (exception)
+    {
+        Return []
+    }
 }
 
 ClassMethod GetUsers() As %Library.DynamicObject
 {
-    Set sql = ##class(%SQL.Statement).%New()
-
-    Set query = "SELECT * FROM Security.Users"
-
-    $$$ThrowOnError(sql.%Prepare(query))
-
-    Set result = sql.%Execute()
-
-    Set response = []
-
-    While result.%Next(.sc)
+    Try
     {
-        $$$ThrowOnError(sc)
-
-        Set user = {}
-
-        Set user.id = ..SafeGet(result, "ID")
-        Set user.accountNeverExpires = ..SafeGet(result, "AccountNeverExpires")
-        Set user.enabled = ..SafeGet(result, "Enabled")
-        Set user.fullName = ..SafeGet(result, "FullName")
-        Set user.name = ..SafeGet(result, "Name")
-        Set user.nameLowerCase = ..SafeGet(result, "NameLowerCase")
-        Set user.nameSpace = ..SafeGet(result, "NameSpace")
-        Set user.roles = ..SafeGet(result, "Roles")
-
-        $$$ThrowOnError(response.%Push(user))
+        Set sql = ##class(%SQL.Statement).%New()
+    
+        Set query = "SELECT * FROM Security.Users"
+    
+        $$$ThrowOnError(sql.%Prepare(query))
+    
+        Set result = sql.%Execute()
+    
+        Set response = []
+    
+        While result.%Next(.sc)
+        {
+            $$$ThrowOnError(sc)
+    
+            Set user = {}
+    
+            Set user.id = ..SafeGet(result, "ID")
+            Set user.accountNeverExpires = ..SafeGet(result, "AccountNeverExpires")
+            Set user.enabled = ..SafeGet(result, "Enabled")
+            Set user.fullName = ..SafeGet(result, "FullName")
+            Set user.name = ..SafeGet(result, "Name")
+            Set user.nameLowerCase = ..SafeGet(result, "NameLowerCase")
+            Set user.nameSpace = ..SafeGet(result, "NameSpace")
+            Set user.roles = ..SafeGet(result, "Roles")
+    
+            Do response.%Push(user)
+        }
+    
+        Return response
     }
-
-    Return response
+    Catch (exception)
+    {
+        Return []
+    }
 }
 
 ClassMethod GetRoles() As %Library.DynamicObject
 {
-    Set sql = ##class(%SQL.Statement).%New()
-
-    Set query = "SELECT * FROM Security.Roles"
-
-    $$$ThrowOnError(sql.%Prepare(query))
-
-    Set result = sql.%Execute()
-
-    Set response = []
-
-    While result.%Next(.sc)
+    Try
     {
-        $$$ThrowOnError(sc)
-
-        Set role = {}
-
-        Set role.id = ..SafeGet(result, "ID")
-        Set role.description = ..SafeGet(result, "Description")
-        Set role.escalationOnly = ..SafeGet(result, "EscalationOnly")
-        Set role.grantedRoles = ..SafeGet(result, "GrantedRoles")
-        Set role.name = ..SafeGet(result, "Name")
-        Set role.nameLowerCase = ..SafeGet(result, "NameLowerCase")
-        Set role.version = ..SafeGet(result, "Version")
-
-        $$$ThrowOnError(response.%Push(role))
+        Set sql = ##class(%SQL.Statement).%New()
+    
+        Set query = "SELECT * FROM Security.Roles"
+    
+        $$$ThrowOnError(sql.%Prepare(query))
+    
+        Set result = sql.%Execute()
+    
+        Set response = []
+    
+        While result.%Next(.sc)
+        {
+            $$$ThrowOnError(sc)
+    
+            Set role = {}
+    
+            Set role.id = ..SafeGet(result, "ID")
+            Set role.description = ..SafeGet(result, "Description")
+            Set role.escalationOnly = ..SafeGet(result, "EscalationOnly")
+            Set role.grantedRoles = ..SafeGet(result, "GrantedRoles")
+            Set role.name = ..SafeGet(result, "Name")
+            Set role.nameLowerCase = ..SafeGet(result, "NameLowerCase")
+    
+            Do response.%Push(role)
+        }
+    
+        Return response
     }
-
-    Return response
+    Catch (exception)
+    {
+        Return []
+    }
 }
 
 ClassMethod GetResources() As %Library.DynamicObject
 {
-    Set sql = ##class(%SQL.Statement).%New()
-
-    Set query = "SELECT * FROM Security.Resources"
-
-    $$$ThrowOnError(sql.%Prepare(query))
-
-    Set result = sql.%Execute()
-
-    Set response = []
-
-    While result.%Next(.sc)
+    Try
     {
-        $$$ThrowOnError(sc)
-
-        Set resource = {}
-
-        Set resource.id = ..SafeGet(result, "ID")
-        Set resource.description = ..SafeGet(result, "Description")
-        Set resource.name = ..SafeGet(result, "Name")
-        Set resource.nameLowerCase = ..SafeGet(result, "NameLowerCase")
-        Set resource.publicPermission = ..SafeGet(result, "PublicPermission")
-        Set resource.type = ..SafeGet(result, "Type")
-        Set resource.version = ..SafeGet(result, "Version")
-
-        $$$ThrowOnError(response.%Push(resource))
+        Set sql = ##class(%SQL.Statement).%New()
+    
+        Set query = "SELECT * FROM Security.Resources"
+    
+        $$$ThrowOnError(sql.%Prepare(query))
+    
+        Set result = sql.%Execute()
+    
+        Set response = []
+    
+        While result.%Next(.sc)
+        {
+            $$$ThrowOnError(sc)
+    
+            Set resource = {}
+    
+            Set resource.id = ..SafeGet(result, "ID")
+            Set resource.description = ..SafeGet(result, "Description")
+            Set resource.name = ..SafeGet(result, "Name")
+            Set resource.nameLowerCase = ..SafeGet(result, "NameLowerCase")
+            Set resource.publicPermission = ..SafeGet(result, "PublicPermission")
+            Set resource.type = ..SafeGet(result, "Type")
+    
+            Do response.%Push(resource)
+        }
+    
+        Return response
     }
-
-    Return response
+    Catch (exception)
+    {
+        Return []
+    }
 }
 
 ClassMethod GetSsl() As %Library.DynamicObject
 {
-    Set sql = ##class(%SQL.Statement).%New()
-
-    Set query = "SELECT * FROM Security.SSLConfigs"
-
-    $$$ThrowOnError(sql.%Prepare(query))
-
-    Set result = sql.%Execute()
-
-    Set response = []
-
-    While result.%Next(.sc)
+    Try
     {
-        $$$ThrowOnError(sc)
-
-        Set ssl = {}
-
-        Set ssl.id = ..SafeGet(result, "ID")
-        Set ssl.cipherList = ..SafeGet(result, "CipherList")
-        Set ssl.protocols = ..SafeGet(result, "Protocols")
-        Set ssl.tLSMaxVersion = ..SafeGet(result, "TLSMaxVersion")
-        Set ssl.tLSMinVersion = ..SafeGet(result, "TLSMinVersion")
-        Set ssl.type = ..SafeGet(result, "Type")
-        Set ssl.version = ..SafeGet(result, "Version")
-        Set ssl.verifyDepth = ..SafeGet(result, "VerifyDepth")
-        Set ssl.verifyPeer = ..SafeGet(result, "VerifyPeer")
-
-        $$$ThrowOnError(response.%Push(ssl))
+        Set sql = ##class(%SQL.Statement).%New()
+    
+        Set query = "SELECT * FROM Security.SSLConfigs"
+    
+        $$$ThrowOnError(sql.%Prepare(query))
+    
+        Set result = sql.%Execute()
+    
+        Set response = []
+    
+        While result.%Next(.sc)
+        {
+            $$$ThrowOnError(sc)
+    
+            Set ssl = {}
+    
+            Set ssl.id = ..SafeGet(result, "ID")
+            Set ssl.cipherList = ..SafeGet(result, "CipherList")
+            Set ssl.protocols = ..SafeGet(result, "Protocols")
+            Set ssl.tLSMaxVersion = ..SafeGet(result, "TLSMaxVersion")
+            Set ssl.tLSMinVersion = ..SafeGet(result, "TLSMinVersion")
+            Set ssl.type = ..SafeGet(result, "Type")
+            Set ssl.verifyDepth = ..SafeGet(result, "VerifyDepth")
+            Set ssl.verifyPeer = ..SafeGet(result, "VerifyPeer")
+    
+            Do response.%Push(ssl)
+        }
+    
+        Return response
     }
-
-    Return response
+    Catch (exception)
+    {
+        Return []
+    }
 }
 
 ClassMethod GetCredentials() As %Library.DynamicObject
 {
-    Set sql = ##class(%SQL.Statement).%New()
-
-    Set query = "SELECT * FROM Ens_Config.Credentials"
-
-    $$$ThrowOnError(sql.%Prepare(query))
-
-    Set result = sql.%Execute()
-
-    Set response = []
-
-    While result.%Next(.sc)
+    Try
     {
-        $$$ThrowOnError(sc)
-
-        Set credential = {}
-
-        Set credential.id = ..SafeGet(result, "SystemName")
-        Set credential.username = ..SafeGet(result, "Username")
-
-        $$$ThrowOnError(response.%Push(credential))
+        Set sql = ##class(%SQL.Statement).%New()
+    
+        Set query = "SELECT * FROM Ens_Config.Credentials"
+    
+        $$$ThrowOnError(sql.%Prepare(query))
+    
+        Set result = sql.%Execute()
+    
+        Set response = []
+    
+        While result.%Next(.sc)
+        {
+            $$$ThrowOnError(sc)
+    
+            Set credential = {}
+    
+            Set credential.id = ..SafeGet(result, "SystemName")
+            Set credential.username = ..SafeGet(result, "Username")
+    
+            Do response.%Push(credential)
+        }
+    
+        Return response
     }
-
-    Return response
+    Catch (exception)
+    {
+        Return []
+    }
 }
 
 ClassMethod GetClasses() As %Library.DynamicObject
 {
-    Set sql = ##class(%SQL.Statement).%New()
-
-    Set query = "SELECT * FROM %Library.RoutineMgr_StudioOpenDialog('*.cls',1,1,0,1,0,0) WHERE Name NOT LIKE 'Ens.%' AND Name NOT LIKE 'EnsLib.%' AND Name NOT LIKE 'EnsPortal.%' AND Name NOT LIKE 'CSPX.%' AND Name NOT LIKE 'HS.%'"
-
-    $$$ThrowOnError(sql.%Prepare(query))
-
-    Set result = sql.%Execute()
-
-    Set response = []
-
-    While result.%Next(.sc)
+    Try
     {
-        $$$ThrowOnError(sc)
-
-        Set class = {}
-
-        Set class.id = ..SafeGet(result, "Name")
-        Set class.type = ..SafeGet(result, "Type")
-
-        $$$ThrowOnError(response.%Push(class))
+        Set sql = ##class(%SQL.Statement).%New()
+    
+        Set query = "SELECT * FROM %Library.RoutineMgr_StudioOpenDialog('*.cls',1,1,0,1,0,0)"
+        Set query = query _ " WHERE Name NOT LIKE 'Ens.%'"
+        Set query = query _ " AND Name NOT LIKE 'EnsLib.%'"
+        Set query = query _ " AND Name NOT LIKE 'EnsPortal.%'"
+        Set query = query _ " AND Name NOT LIKE 'CSPX.%'"
+        Set query = query _ " AND Name NOT LIKE 'HS.%'"
+        Set query = query _ " AND Name NOT LIKE 'HSMOD.%'"
+        Set query = query _ " AND Name NOT LIKE 'SchemaMap.%'"
+        Set query = query _ " AND Name NOT LIKE 'WebTerminal.%'"
+    
+        $$$ThrowOnError(sql.%Prepare(query))
+    
+        Set result = sql.%Execute()
+    
+        Set response = []
+    
+        While result.%Next(.sc)
+        {
+            If ($SYSTEM.Status.IsError(sc))
+            {
+                Continue
+            }
+    
+            Set class = {}
+    
+            Set class.id = ..SafeGet(result, "Name")
+            Set class.type = ..SafeGet(result, "Type")
+    
+            Do response.%Push(class)
+        }
+    
+        Return response
     }
-
-    Return response
+    Catch (exception)
+    {
+        Return []
+    }
 }
 
 ClassMethod GetGlobals() As %Library.DynamicObject
 {
-    Set sql = ##class(%SQL.Statement).%New()
-
-    Set query = "SELECT * FROM %SYS.GlobalQuery_NameSpaceList()"
-
-    $$$ThrowOnError(sql.%Prepare(query))
-
-    Set result = sql.%Execute()
-
-    Set response = []
-
-    While result.%Next(.sc)
+    Try
     {
-        $$$ThrowOnError(sc)
-
-        Set global = {}
-
-        Set global.id = ..SafeGet(result, "Name")
-        Set global.resourceName = ..SafeGet(result, "ResourceName")
-        Set global.permission = ..SafeGet(result, "Permission")
-        Set global.empty = ..SafeGet(result, "Empty")
-        Set global.keep = ..SafeGet(result, "Keep")
-        Set global.collation = ..SafeGet(result, "Collation")
-        Set global.hasData = ..SafeGet(result, "HasData")
-
-        $$$ThrowOnError(response.%Push(global))
+        Set sql = ##class(%SQL.Statement).%New()
+    
+        Set query = "SELECT * FROM %SYS.GlobalQuery_NameSpaceList()"
+    
+        $$$ThrowOnError(sql.%Prepare(query))
+    
+        Set result = sql.%Execute()
+    
+        Set response = []
+    
+        While result.%Next(.sc)
+        {
+            $$$ThrowOnError(sc)
+    
+            Set global = {}
+    
+            Set global.id = ..SafeGet(result, "Name")
+            Set global.resourceName = ..SafeGet(result, "ResourceName")
+            Set global.permission = ..SafeGet(result, "Permission")
+            Set global.empty = ..SafeGet(result, "Empty")
+            Set global.keep = ..SafeGet(result, "Keep")
+            Set global.collation = ..SafeGet(result, "Collation")
+            Set global.hasData = ..SafeGet(result, "HasData")
+    
+            Do response.%Push(global)
+        }
+    
+        Return response
     }
-
-    Return response
+    Catch (exception)
+    {
+        Return []
+    }
 }
 
 ClassMethod GetProductionItems() As %Library.DynamicObject
 {
-    Set sql = ##class(%SQL.Statement).%New()
-
-    Set currentProduction = ##class(Ens.Director).GetActiveProductionName()
-
-    Set query = "SELECT * FROM Ens_Config.Item WHERE Production = ?"
-
-    $$$ThrowOnError(sql.%Prepare(query))
-
-    Set result = sql.%Execute(currentProduction)
-
-    Set response = []
-
-    While result.%Next(.sc)
+    Try
     {
-        $$$ThrowOnError(sc)
-
-        Set productionItem = {}
-
-        Set productionItem.id = ..SafeGet(result, "Name")
-        Set productionItem.alertGroups = ..SafeGet(result, "AlertGroups")
-        Set productionItem.category = ..SafeGet(result, "Category")
-        Set productionItem.className = ..SafeGet(result, "ClassName")
-        Set productionItem.comment = ..SafeGet(result, "Comment")
-        Set productionItem.disableErrorTraps = ..SafeGet(result, "DisableErrorTraps")
-        Set productionItem.foreground = ..SafeGet(result, "Foreground")
-        Set productionItem.logTraceEvents = ..SafeGet(result, "LogTraceEvents")
-        Set productionItem.poolSize = ..SafeGet(result, "PoolSize")
-        Set productionItem.production = ..SafeGet(result, "Production")
-        Set productionItem.schedule = ..SafeGet(result, "Schedule")
-        Set productionItem.settings = ..SafeGet(result, "Settings")
-
-        $$$ThrowOnError(response.%Push(productionItem))
+        Set sql = ##class(%SQL.Statement).%New()
+    
+        Set currentProduction = ##class(Ens.Director).GetActiveProductionName()
+    
+        Set query = "SELECT * FROM Ens_Config.Item WHERE Production = ?"
+    
+        $$$ThrowOnError(sql.%Prepare(query))
+    
+        Set result = sql.%Execute(currentProduction)
+    
+        Set response = []
+    
+        While result.%Next(.sc)
+        {
+            $$$ThrowOnError(sc)
+    
+            Set productionItem = {}
+    
+            Set productionItem.id = ..SafeGet(result, "Name")
+            Set productionItem.alertGroups = ..SafeGet(result, "AlertGroups")
+            Set productionItem.category = ..SafeGet(result, "Category")
+            Set productionItem.className = ..SafeGet(result, "ClassName")
+            Set productionItem.comment = ..SafeGet(result, "Comment")
+            Set productionItem.disableErrorTraps = ..SafeGet(result, "DisableErrorTraps")
+            Set productionItem.foreground = ..SafeGet(result, "Foreground")
+            Set productionItem.logTraceEvents = ..SafeGet(result, "LogTraceEvents")
+            Set productionItem.poolSize = ..SafeGet(result, "PoolSize")
+            Set productionItem.production = ..SafeGet(result, "Production")
+            Set productionItem.schedule = ..SafeGet(result, "Schedule")
+            Set productionItem.settings = ..SafeGet(result, "Settings")
+    
+            Do response.%Push(productionItem)
+        }
+    
+        Return response
     }
-
-    Return response
+    Catch (exception)
+    {
+        Return []
+    }
 }
 
 ClassMethod GetLookups() As %Library.DynamicObject
 {
-    Set sql = ##class(%SQL.Statement).%New()
-
-    Set query = "SELECT * FROM Ens_Util.LookupTable"
-
-    $$$ThrowOnError(sql.%Prepare(query))
-
-    Set result = sql.%Execute()
-
-    Set response = []
-
-    While result.%Next(.sc)
-    {
-        $$$ThrowOnError(sc)
-
-        Set lookup = {}
-
-        Set lookup.dataValue = ..SafeGet(result, "DataValue")
-        Set lookup.keyName = ..SafeGet(result, "KeyName")
-        Set lookup.tableName = ..SafeGet(result, "TableName")
-
-        $$$ThrowOnError(response.%Push(lookup))
-    }
-
-    Return response
-}
-
-ClassMethod SafeGet(pResult As %SQL.StatementResult, pColumnName As %Library.String) As %Library.String
-{
     Try
     {
-        Return pResult.%Get(pColumnName)
+        Set sql = ##class(%SQL.Statement).%New()
+    
+        Set query = "SELECT * FROM Ens_Util.LookupTable"
+    
+        $$$ThrowOnError(sql.%Prepare(query))
+    
+        Set result = sql.%Execute()
+    
+        Set response = []
+    
+        While result.%Next(.sc)
+        {
+            $$$ThrowOnError(sc)
+    
+            Set lookup = {}
+    
+            Set lookup.dataValue = ..SafeGet(result, "DataValue")
+            Set lookup.keyName = ..SafeGet(result, "KeyName")
+            Set lookup.tableName = ..SafeGet(result, "TableName")
+    
+            Do response.%Push(lookup)
+        }
+    
+        Return response
     }
     Catch (exception)
     {
-        Return ""
+        Return []
     }
 }
 
